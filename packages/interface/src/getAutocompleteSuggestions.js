@@ -513,7 +513,7 @@ function canUseDirective(
 
 // Utility for collecting rich type information given any token's state
 // from the graphql-mode parser.
-function getTypeInfo(schema: GraphQLSchema, tokenState: State): TypeInfo {
+export function getTypeInfo(schema: GraphQLSchema, tokenState: State): TypeInfo {
   let argDef;
   let argDefs;
   let directiveDef;

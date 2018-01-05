@@ -1,5 +1,6 @@
 import {
-  getTokenAtPosition
+  getTokenAtPosition,
+  getTypeInfo
 } from './getAutocompleteSuggestions';
 
 export function getTypeInformation(
@@ -9,9 +10,13 @@ export function getTypeInformation(
   contextToken?: ContextToken,
 ): string {
   const token = contextToken || getTokenAtPosition(queryText, cursor);
+  const typeInfo = getTypeInfo(schema, token.state);
+
+  const res = typeInfo;
   return `
+[GraphQL]
 \`\`\`json
-${JSON.stringify(token, null, 2)}
+${JSON.stringify(res, null, 2)}
 \`\`\`
   `;
 }
