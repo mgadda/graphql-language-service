@@ -32,6 +32,7 @@ import {
   DidChangeTextDocumentNotification,
   DidCloseTextDocumentNotification,
   ExitNotification,
+  HoverRequest,
   InitializeRequest,
   PublishDiagnosticsNotification,
   ShutdownRequest,
@@ -168,4 +169,7 @@ function addHandlers(
   connection.onRequest(DefinitionRequest.type, params =>
     messageProcessor.handleDefinitionRequest(params),
   );
+  connection.onRequest(HoverRequest.type, params =>
+    messageProcessor.handleHoverRequest(params),
+  )
 }

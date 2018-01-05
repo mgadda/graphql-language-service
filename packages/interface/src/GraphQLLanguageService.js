@@ -46,6 +46,7 @@ import {
 
 import {parse, print} from 'graphql';
 import {getAutocompleteSuggestions} from './getAutocompleteSuggestions';
+import {getTypeInformation} from './getTypeInformation';
 import {validateQuery, getRange, SEVERITY} from './getDiagnostics';
 import {
   getDefinitionQueryResultForFragmentSpread,
@@ -175,6 +176,24 @@ export class GraphQLLanguageService {
       }
     }
     return [];
+  }
+
+  async getTypeInformation(
+    query: string,
+    position: Position,
+    filePath: Uri
+  ): Promise<string> {
+    const projectConfig = this._graphQLConfig.getConfigForFile(filePath);
+    if (projectConfig.schemaPath) {
+      const schema = await this._graphQLCache.getSchema(
+        projectConfig.projectName,
+      );
+
+      if (schema) {
+        return getTypeInformation(schema, query, position);
+      }
+    }
+    return 'no schema :(';
   }
 
   async getDefinition(

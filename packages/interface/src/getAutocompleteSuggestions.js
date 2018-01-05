@@ -375,7 +375,7 @@ function getSuggestionsForDirective(
   return [];
 }
 
-function getTokenAtPosition(queryText: string, cursor: Position): ContextToken {
+export function getTokenAtPosition(queryText: string, cursor: Position): ContextToken {
   let styleAtCursor = null;
   let stateAtCursor = null;
   let stringAtCursor = null;

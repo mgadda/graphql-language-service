@@ -31,6 +31,8 @@ import {
   CompletionRequest,
   CompletionList,
   DefinitionRequest,
+  Hover,
+  HoverRequest,
   InitializeRequest,
   InitializeResult,
   Location,
@@ -81,6 +83,7 @@ export class MessageProcessor {
         completionProvider: {resolveProvider: true},
         definitionProvider: true,
         textDocumentSync: 1,
+        hoverProvider: true,
       },
     };
 
@@ -342,6 +345,69 @@ export class MessageProcessor {
     );
 
     return {items: result, isIncomplete: false};
+  }
+
+  async handleHoverRequest(
+    params: HoverRequest.type,
+    token: CancellationToken,
+  ): Promise<Hover> {
+
+    if (!this._isInitialized) {
+      return [];
+    }
+    // `textDocument/comletion` event takes advantage of the fact that
+    // `textDocument/didChange` event always fires before, which would have
+    // updated the cache with the query text from the editor.
+    // Treat the computed list always complete.
+    if (
+      !params ||
+      !params.textDocument ||
+      !params.textDocument.uri ||
+      !params.position
+    ) {
+      throw new Error(
+        '`textDocument`, `textDocument.uri`, and `position` arguments are required.',
+      );
+    }
+
+    const textDocument = params.textDocument;
+    const position = params.position;
+
+    const cachedDocument = this._getCachedDocument(textDocument.uri);
+    if (!cachedDocument) {
+      throw new Error('A cached document cannot be found.');
+    }
+
+    const found = cachedDocument.contents.find(content => {
+      const currentRange = content.range;
+      if (currentRange && currentRange.containsPosition(position)) {
+        return true;
+      }
+    });
+
+    // If there is no GraphQL query in this file, return an empty result.
+    if (!found) {
+      return '';
+    }
+
+    const {query, range} = found;
+
+    if (range) {
+      position.line -= range.start.line;
+    }
+    const result = await this._languageService.getTypeInformation(
+      query,
+      position,
+      textDocument.uri,
+    );
+
+    return {
+      contents: result
+    };
+
+    // return {
+    //   contents: 'hi there!'
+    // };
   }
 
   async handleDefinitionRequest(
