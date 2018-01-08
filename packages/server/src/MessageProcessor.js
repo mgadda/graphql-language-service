@@ -351,7 +351,6 @@ export class MessageProcessor {
     params: HoverRequest.type,
     token: CancellationToken,
   ): Promise<Hover> {
-
     if (!this._isInitialized) {
       return [];
     }
@@ -402,7 +401,7 @@ export class MessageProcessor {
     );
 
     return {
-      contents: result
+      contents: result,
     };
 
     // return {

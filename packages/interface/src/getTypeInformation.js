@@ -1,7 +1,4 @@
-import {
-  getTokenAtPosition,
-  getTypeInfo
-} from './getAutocompleteSuggestions';
+import {getTokenAtPosition, getTypeInfo} from './getAutocompleteSuggestions';
 
 export function getTypeInformation(
   schema: GraphQLSchema,

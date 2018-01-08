@@ -181,7 +181,7 @@ export class GraphQLLanguageService {
   async getTypeInformation(
     query: string,
     position: Position,
-    filePath: Uri
+    filePath: Uri,
   ): Promise<string> {
     const projectConfig = this._graphQLConfig.getConfigForFile(filePath);
     if (projectConfig.schemaPath) {

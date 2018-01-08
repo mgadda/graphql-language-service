@@ -171,5 +171,5 @@ function addHandlers(
   );
   connection.onRequest(HoverRequest.type, params =>
     messageProcessor.handleHoverRequest(params),
-  )
+  );
 }
