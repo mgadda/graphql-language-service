@@ -12,7 +12,8 @@ import {expect} from 'chai';
 import {GraphQLSchema} from 'graphql/type';
 import {parse} from 'graphql/language';
 import {getGraphQLConfig} from 'graphql-config';
-import {beforeEach, describe, it} from 'mocha';
+import {beforeEach, afterEach, describe, it} from 'mocha';
+import fetchMock from 'fetch-mock';
 
 import {GraphQLCache} from '../GraphQLCache';
 import {getQueryAndRange} from '../MessageProcessor';
@@ -26,17 +27,42 @@ function wihtoutASTNode(definition: object) {
 
 describe('GraphQLCache', () => {
   let cache;
+  let graphQLRC;
 
   beforeEach(async () => {
     const watchmanClient = new MockWatchmanClient();
     const configDir = __dirname;
-    const graphQLRC = getGraphQLConfig(configDir);
+    graphQLRC = getGraphQLConfig(configDir);
     cache = new GraphQLCache(configDir, graphQLRC, watchmanClient);
+  });
+
+  afterEach(() => {
+    fetchMock.restore();
   });
 
   describe('getSchema', () => {
     it('generates the schema correctly for the test app config', async () => {
       const schema = await cache.getSchema('testWithSchema');
+      expect(schema instanceof GraphQLSchema).to.equal(true);
+    });
+
+    it('generates the schema correctly from endpoint', async () => {
+      const introspectionResult = await graphQLRC
+        .getProjectConfig('testWithSchema')
+        .resolveIntrospection();
+
+      fetchMock.mock({
+        matcher: '*',
+        response: {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: introspectionResult,
+        },
+      });
+
+      const schema = await cache.getSchema('testWithEndpoint');
+      expect(fetchMock.called('*')).to.equal(true);
       expect(schema instanceof GraphQLSchema).to.equal(true);
     });
 

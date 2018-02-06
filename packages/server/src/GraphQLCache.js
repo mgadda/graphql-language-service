@@ -411,23 +411,51 @@ export class GraphQLCache {
   ): Promise<?GraphQLSchema> => {
     const projectConfig = this._graphQLConfig.getProjectConfig(appName);
 
-    if (!projectConfig || !projectConfig.schemaPath) {
+    if (!projectConfig) {
       return null;
     }
 
     const projectName = appName || 'undefinedName';
-
     const schemaPath = projectConfig.schemaPath;
-    const schemaCacheKey = `${schemaPath}:${projectName}`;
+    const endpointsExtension = projectConfig.endpointsExtension;
+    const endpoint = endpointsExtension && endpointsExtension.getEndpoint(); // XXX pass name?
 
-    if (this._schemaMap.has(schemaCacheKey)) {
-      const schema = this._schemaMap.get(schemaCacheKey);
-      return schema && queryHasExtensions
-        ? this._extendSchema(schema, schemaPath, projectName)
-        : schema;
+    let schemaCacheKey = null;
+    let schema = null;
+
+    if (endpoint) {
+      schemaCacheKey = `${endpoint.url}:${projectName}`;
+
+      // Maybe use cache
+      if (this._schemaMap.has(schemaCacheKey)) {
+        schema = this._schemaMap.get(schemaCacheKey);
+        return schema && queryHasExtensions
+          ? this._extendSchema(schema, schemaPath, projectName)
+          : schema;
+      }
+
+      // Read schema from network
+      try {
+        schema = await endpoint.resolveSchema();
+      } catch (failure) {
+        // Never mind
+      }
     }
 
-    let schema = projectConfig.getSchema();
+    if (!schema && schemaPath) {
+      schemaCacheKey = `${schemaPath}:${projectName}`;
+
+      // Maybe use cache
+      if (this._schemaMap.has(schemaCacheKey)) {
+        schema = this._schemaMap.get(schemaCacheKey);
+        return schema && queryHasExtensions
+          ? this._extendSchema(schema, schemaPath, projectName)
+          : schema;
+      }
+
+      // Read from disk
+      schema = projectConfig.getSchema();
+    }
 
     const customDirectives = projectConfig.extensions.customDirectives;
     if (customDirectives && schema) {
@@ -443,7 +471,9 @@ export class GraphQLCache {
       schema = this._extendSchema(schema, schemaPath, projectName);
     }
 
-    this._schemaMap.set(schemaCacheKey, schema);
+    if (schemaCacheKey) {
+      this._schemaMap.set(schemaCacheKey, schema);
+    }
     return schema;
   };
 

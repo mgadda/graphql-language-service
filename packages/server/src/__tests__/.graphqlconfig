@@ -5,6 +5,15 @@
     "testWithSchema": {
       "schemaPath": "__schema__/StarWarsSchema.graphql"
     },
+    "testWithEndpoint": {
+      "extensions": {
+        "endpoints": {
+          "prod": {
+            "url": "https://my.test-server.com/graphql"
+          }
+        }
+      }
+    },
     "testWithoutSchema": {
     },
     "testWithCustomDirectives": {
