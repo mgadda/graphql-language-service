@@ -9,7 +9,17 @@
       "extensions": {
         "endpoints": {
           "prod": {
-            "url": "https://my.test-server.com/graphql"
+            "url": "https://example.com/graphql"
+          }
+        }
+      }
+    },
+    "testWithEndpointAndSchema": {
+      "schemaPath": "__schema__/StarWarsSchema.graphql",
+      "extensions": {
+        "endpoints": {
+          "prod": {
+            "url": "https://example.com/graphql"
           }
         }
       }

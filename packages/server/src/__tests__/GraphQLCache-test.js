@@ -66,7 +66,18 @@ describe('GraphQLCache', () => {
       expect(schema instanceof GraphQLSchema).to.equal(true);
     });
 
-    it('does not generate a schema without a schema path', async () => {
+    it('falls through to schema on disk if endpoint fails', async () => {
+      fetchMock.mock({
+        matcher: '*',
+        response: 500,
+      });
+
+      const schema = await cache.getSchema('testWithEndpointAndSchema');
+      expect(fetchMock.called('*')).to.equal(true);
+      expect(schema instanceof GraphQLSchema).to.equal(true);
+    });
+
+    it('does not generate a schema without a schema path or endpoint', async () => {
       const schema = await cache.getSchema('testWithoutSchema');
       expect(schema instanceof GraphQLSchema).to.equal(false);
     });
