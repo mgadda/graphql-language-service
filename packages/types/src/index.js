@@ -105,6 +105,13 @@ export interface GraphQLCache {
     appName: ?string,
     queryHasExtensions?: ?boolean,
   ) => Promise<?GraphQLSchema>,
+
+  handleWatchmanSubscribeEvent: (
+    rootDir: string,
+    projectConfig: GraphQLProjectConfig,
+  ) => (
+    result: Object
+  ) => void,
 }
 
 // online-parser related

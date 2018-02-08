@@ -9,6 +9,7 @@
  */
 
 import net from 'net';
+import path from 'path';
 
 import {MessageProcessor} from './MessageProcessor';
 
@@ -35,6 +36,13 @@ import {
   InitializeRequest,
   PublishDiagnosticsNotification,
   ShutdownRequest,
+  RegistrationRequest,
+  DidChangeWatchedFilesRegistrationOptions,
+  FileSystemWatcher,
+  WatchKind,
+  ShowMessageRequest,
+  DidChangeWatchedFilesNotification,
+  createConnection
 } from 'vscode-languageserver';
 
 import {Logger} from './Logger';
@@ -159,7 +167,7 @@ function addHandlers(
   connection.onNotification('$/cancelRequest', () => ({}));
 
   connection.onRequest(InitializeRequest.type, (params, token) =>
-    messageProcessor.handleInitializeRequest(params, token, configDir),
+    messageProcessor.handleInitializeRequest(params, token, configDir)
   );
   connection.onRequest(CompletionRequest.type, params =>
     messageProcessor.handleCompletionRequest(params),
@@ -167,5 +175,8 @@ function addHandlers(
   connection.onRequest(CompletionResolveRequest.type, item => item);
   connection.onRequest(DefinitionRequest.type, params =>
     messageProcessor.handleDefinitionRequest(params),
+  );
+  connection.onNotification(DidChangeWatchedFilesNotification.type, (params) =>
+    messageProcessor.handleWatchedFilesChangedNotification(params)
   );
 }

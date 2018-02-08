@@ -16,9 +16,12 @@ import type {
   Range as RangeType,
 } from 'graphql-language-service-types';
 
+require('util.promisify/shim')(); // required until VS Code moves to node v8.x+
 import {extname, dirname} from 'path';
+import {open, stat, readFile, Stats, readFileSync} from 'fs';
 import {URL} from 'url';
-import {findGraphQLConfigFile} from 'graphql-config';
+import {promisify} from 'util';
+import {findGraphQLConfigFile, getGraphQLConfig, GraphQLProjectConfig} from 'graphql-config';
 import {GraphQLLanguageService} from 'graphql-language-service-interface';
 import {Position, Range} from 'graphql-language-service-utils';
 import {
@@ -35,11 +38,13 @@ import {
   InitializeResult,
   Location,
   PublishDiagnosticsParams,
+  DidChangeWatchedFilesParams,
 } from 'vscode-languageserver';
 
 import {getGraphQLCache} from './GraphQLCache';
 import {findGraphQLTags} from './findGraphQLTags';
 import {Logger} from './Logger';
+import { GraphQLWatchman } from './GraphQLWatchman';
 
 // Map { uri => { query, range } }
 
@@ -52,6 +57,7 @@ export class MessageProcessor {
   _graphQLCache: GraphQLCache;
   _languageService: GraphQLLanguageService;
   _textDocumentCache: Map<string, CachedDocumentType>;
+  _watchmanClient: ?GraphQLWatchman;
 
   _isInitialized: boolean;
 
@@ -93,6 +99,31 @@ export class MessageProcessor {
       );
     }
 
+    // Use watchman to subscribe to project file changes only if watchman is
+    // installed. Otherwise, rely on LSP watched files did change events.
+    try {
+      const watchmanClient = new GraphQLWatchman();
+      // If watchman isn't installed, `GraphQLWatchman.checkVersion` will throw
+      await watchmanClient.checkVersion();
+      const projects = getGraphQLConfig(rootPath).getProjects();
+
+      // For each project config, subscribe to the file changes and update the
+      // cache accordingly.
+      Object.values(projects).forEach((projectConfig: GraphQLProjectConfig) => {
+        watchmanClient.subscribe(
+          projectConfig.configDir,
+          this._graphQLCache.handleWatchmanSubscribeEvent(rootPath, projectConfig)
+        );
+      });
+      this._watchmanClient = watchmanClient;
+    } catch(err) {
+      // If checkVersion raises {type: "ENOENT"}, watchman is not available.
+      // But it's okay to proceed. We'll use LSP file change notifications instead.
+      // If any other kind of error occurs, rethrow it up the call stack.
+      if (err.code !== "ENOENT") {
+        throw err;
+      }
+    }
     this._graphQLCache = await getGraphQLCache(rootPath);
     this._languageService = new GraphQLLanguageService(this._graphQLCache);
 
@@ -342,6 +373,51 @@ export class MessageProcessor {
     );
 
     return {items: result, isIncomplete: false};
+  }
+
+  async handleWatchedFilesChangedNotification(
+    params: DidChangeWatchedFilesParams
+  ): Promise<PublishDiagnosticsParams> {
+    if (!this._isInitialized || this._watchmanClient) {
+      return null;
+    }
+
+    return Promise.all(params.changes.map(async (change) => {
+      if (change.type === 1 /* Created */ || change.type === 2 /* Changed */) {
+        const uri = change.uri;
+        const text: string = readFileSync(new URL(uri).pathname).toString();
+        const contents = getQueryAndRange(text, uri);
+
+        this._updateFragmentDefinition(uri, contents);
+
+        let diagnostics = (await Promise.all(
+          contents.map(async ({query, range}) => {
+            const results = await this._languageService.getDiagnostics(query, uri);
+            if (results && results.length > 0) {
+              return processDiagnosticsMessage(results, query, range);
+            } else {
+              return [];
+            }
+          })
+        )).reduce((left, right) => left.concat(right));
+
+        this._logger.log(
+          JSON.stringify({
+            type: 'usage',
+            messageType: 'workspace/didChangeWatchedFiles',
+            projectName: this._graphQLCache
+              .getGraphQLConfig()
+              .getProjectNameForFile(uri),
+            fileName: uri,
+          }),
+        );
+
+        return {uri, diagnostics};
+
+      } else if (change.type === 3 /* Deleted */) {
+        this._logger.log("file deleted, TODO: clear from fragment cache")
+      }
+    }));
   }
 
   async handleDefinitionRequest(
