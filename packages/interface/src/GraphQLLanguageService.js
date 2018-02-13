@@ -182,14 +182,12 @@ export class GraphQLLanguageService {
     filePath: Uri,
   ): Promise<string> {
     const projectConfig = this._graphQLConfig.getConfigForFile(filePath);
-    if (projectConfig.schemaPath) {
-      const schema = await this._graphQLCache.getSchema(
-        projectConfig.projectName,
-      );
+    const schema = await this._graphQLCache
+      .getSchema(projectConfig.projectName)
+      .catch(() => null);
 
-      if (schema) {
-        return getTypeInformation(schema, query, position);
-      }
+    if (schema) {
+      return getTypeInformation(schema, query, position);
     }
     return 'no schema :(';
   }
