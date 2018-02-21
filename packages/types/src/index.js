@@ -109,9 +109,7 @@ export interface GraphQLCache {
   handleWatchmanSubscribeEvent: (
     rootDir: string,
     projectConfig: GraphQLProjectConfig,
-  ) => (
-    result: Object
-  ) => void,
+  ) => (result: Object) => void,
 }
 
 // online-parser related

@@ -42,7 +42,7 @@ import {
   WatchKind,
   ShowMessageRequest,
   DidChangeWatchedFilesNotification,
-  createConnection
+  createConnection,
 } from 'vscode-languageserver';
 
 import {Logger} from './Logger';
@@ -167,7 +167,7 @@ function addHandlers(
   connection.onNotification('$/cancelRequest', () => ({}));
 
   connection.onRequest(InitializeRequest.type, (params, token) =>
-    messageProcessor.handleInitializeRequest(params, token, configDir)
+    messageProcessor.handleInitializeRequest(params, token, configDir),
   );
   connection.onRequest(CompletionRequest.type, params =>
     messageProcessor.handleCompletionRequest(params),
@@ -176,7 +176,7 @@ function addHandlers(
   connection.onRequest(DefinitionRequest.type, params =>
     messageProcessor.handleDefinitionRequest(params),
   );
-  connection.onNotification(DidChangeWatchedFilesNotification.type, (params) =>
-    messageProcessor.handleWatchedFilesChangedNotification(params)
+  connection.onNotification(DidChangeWatchedFilesNotification.type, params =>
+    messageProcessor.handleWatchedFilesChangedNotification(params),
   );
 }
