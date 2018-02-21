@@ -35,14 +35,8 @@ import {
   ExitNotification,
   InitializeRequest,
   PublishDiagnosticsNotification,
-  ShutdownRequest,
-  RegistrationRequest,
-  DidChangeWatchedFilesRegistrationOptions,
-  FileSystemWatcher,
-  WatchKind,
-  ShowMessageRequest,
   DidChangeWatchedFilesNotification,
-  createConnection,
+  ShutdownRequest,
 } from 'vscode-languageserver';
 
 import {Logger} from './Logger';
