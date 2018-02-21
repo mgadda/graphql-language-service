@@ -236,7 +236,7 @@ export class GraphQLCache {
             );
           }
 
-          this._updateFragmentDefinitionCache(rootDir, filePath, exists);
+          this.updateFragmentDefinitionCache(rootDir, filePath, exists);
         }
       });
     }
@@ -346,7 +346,7 @@ export class GraphQLCache {
     }
   }
 
-  async _updateFragmentDefinitionCache(
+  async updateFragmentDefinitionCache(
     rootDir: Uri,
     filePath: Uri,
     exists: boolean,

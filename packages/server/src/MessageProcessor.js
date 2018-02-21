@@ -435,7 +435,12 @@ export class MessageProcessor {
 
           return {uri, diagnostics};
         } else if (change.type === 3 /* Deleted */) {
-          this._logger.log('file deleted, TODO: clear from fragment cache');
+          this._logger.log('file deleted, removing from cache');
+          this._graphQLCache.updateFragmentDefinitionCache(
+            this._graphQLCache.getGraphQLConfig().configDir,
+            change.uri,
+            false,
+          );
         }
       }),
     );

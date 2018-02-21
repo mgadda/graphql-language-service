@@ -101,6 +101,12 @@ export interface GraphQLCache {
     contents: Array<CachedContent>,
   ) => Promise<void>,
 
+  updateFragmentDefinitionCache: (
+    rootDir: Uri,
+    filePath: Uri,
+    exists: boolean,
+  ) => Promise<void>,
+
   getSchema: (
     appName: ?string,
     queryHasExtensions?: ?boolean,
