@@ -99,22 +99,27 @@ export class MessageProcessor {
       );
     }
 
+    this._graphQLCache = await getGraphQLCache(rootPath);
+
     // Use watchman to subscribe to project file changes only if watchman is
     // installed. Otherwise, rely on LSP watched files did change events.
     try {
       const watchmanClient = new GraphQLWatchman();
       // If watchman isn't installed, `GraphQLWatchman.checkVersion` will throw
       await watchmanClient.checkVersion();
-      const projects = getGraphQLConfig(rootPath).getProjects();
+      const config = getGraphQLConfig(rootPath);
+      const rootProjectConfig = config.getProjectConfig();
+      const projects: GraphQLProjectConfig[] = config.getProjects() || [];
 
       // For each project config, subscribe to the file changes and update the
       // cache accordingly.
-      Object.values(projects).forEach((projectConfig: GraphQLProjectConfig) => {
+      [...Object.values(projects), rootProjectConfig].forEach((projectConfig: GraphQLProjectConfig) => {
         watchmanClient.subscribe(
           projectConfig.configDir,
           this._graphQLCache.handleWatchmanSubscribeEvent(rootPath, projectConfig)
         );
       });
+
       this._watchmanClient = watchmanClient;
     } catch(err) {
       // If checkVersion raises {type: "ENOENT"}, watchman is not available.
@@ -124,7 +129,6 @@ export class MessageProcessor {
         throw err;
       }
     }
-    this._graphQLCache = await getGraphQLCache(rootPath);
     this._languageService = new GraphQLLanguageService(this._graphQLCache);
 
     if (!serverCapabilities) {
@@ -503,7 +507,7 @@ export class MessageProcessor {
     uri: Uri,
     contents: Array<CachedContent>,
   ): Promise<void> {
-    const rootDir = this._graphQLCache.getGraphQLConfig().rootDir;
+    const rootDir = this._graphQLCache.getGraphQLConfig().configDir;
 
     await this._graphQLCache.updateFragmentDefinition(
       rootDir,
