@@ -36,8 +36,7 @@
     "graphql-language-service-interface": "^1.0.18",
     "graphql-language-service-types": "^1.0.18",
     "graphql-language-service-utils": "^1.0.18",
-    "nullthrows": "^1.0.0",
-    "util.promisify": "^1.0.0",
+    "nullthrows": "^1.0.0",    
     "vscode-jsonrpc": "^3.3.0",
     "vscode-languageserver": "^3.3.0"
   },
