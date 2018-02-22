@@ -31,7 +31,7 @@ describe('GraphQLCache', () => {
     const watchmanClient = new MockWatchmanClient();
     const configDir = __dirname;
     const graphQLRC = getGraphQLConfig(configDir);
-    cache = new GraphQLCache(configDir, graphQLRC, watchmanClient);
+    cache = new GraphQLCache(configDir, graphQLRC);
   });
 
   describe('getSchema', () => {

@@ -11,10 +11,12 @@
 import type {
   CachedContent,
   Diagnostic,
+  DidChangeWatchedFilesParams,
   GraphQLCache,
-  Uri,
   Range as RangeType,
+  Uri,
 } from 'graphql-language-service-types';
+import {FileChangeTypeKind} from 'graphql-language-service-types';
 
 require('util.promisify/shim')(); // required until VS Code moves to node v8.x+
 import {extname, dirname} from 'path';
@@ -42,7 +44,6 @@ import {
   InitializeResult,
   Location,
   PublishDiagnosticsParams,
-  DidChangeWatchedFilesParams,
 } from 'vscode-languageserver';
 
 import {getGraphQLCache} from './GraphQLCache';
@@ -69,12 +70,13 @@ export class MessageProcessor {
 
   _logger: Logger;
 
-  constructor(logger: Logger): void {
+  constructor(logger: Logger, watchmanClient: GraphQLWatchman): void {
     this._textDocumentCache = new Map();
     this._isInitialized = false;
     this._willShutdown = false;
 
     this._logger = logger;
+    this._watchmanClient = watchmanClient;
   }
 
   async handleInitializeRequest(
@@ -104,41 +106,9 @@ export class MessageProcessor {
     }
 
     this._graphQLCache = await getGraphQLCache(rootPath);
-
-    // Use watchman to subscribe to project file changes only if watchman is
-    // installed. Otherwise, rely on LSP watched files did change events.
-    try {
-      const watchmanClient = new GraphQLWatchman();
-      // If watchman isn't installed, `GraphQLWatchman.checkVersion` will throw
-      await watchmanClient.checkVersion();
-      const config = getGraphQLConfig(rootPath);
-      const rootProjectConfig = config.getProjectConfig();
-      const projects: GraphQLProjectConfig[] = config.getProjects() || [];
-
-      // For each project config, subscribe to the file changes and update the
-      // cache accordingly.
-      [
-        ...Object.values(projects),
-        rootProjectConfig,
-      ].forEach((projectConfig: GraphQLProjectConfig) => {
-        watchmanClient.subscribe(
-          projectConfig.configDir,
-          this._graphQLCache.handleWatchmanSubscribeEvent(
-            rootPath,
-            projectConfig,
-          ),
-        );
-      });
-
-      this._watchmanClient = watchmanClient;
-    } catch (err) {
-      // If checkVersion raises {type: "ENOENT"}, watchman is not available.
-      // But it's okay to proceed. We'll use LSP file change notifications instead.
-      // If any other kind of error occurs, rethrow it up the call stack.
-      if (err.code !== 'ENOENT') {
-        throw err;
-      }
-    }
+    if (this._watchmanClient) {
+      this._subcribeWatchman(rootPath, this._graphQLCache, this._watchmanClient);
+    }    
     this._languageService = new GraphQLLanguageService(this._graphQLCache);
 
     if (!serverCapabilities) {
@@ -155,6 +125,48 @@ export class MessageProcessor {
     );
 
     return serverCapabilities;
+  }
+
+  // Use watchman to subscribe to project file changes only if watchman is
+  // installed. Otherwise, rely on LSP watched files did change events.
+  async _subcribeWatchman(rootPath: string, graphqlCache: GraphQLCache, watchmanClient: GraphQLWatchman) {
+    if (!watchmanClient) {
+      return;
+    }
+    try {
+      // If watchman isn't installed, `GraphQLWatchman.checkVersion` will throw
+      await watchmanClient.checkVersion();
+
+      // Otherwise, subcribe watchman according to project config(s).
+      const config = getGraphQLConfig(rootPath);
+      let projectConfigs: GraphQLProjectConfig[] = Object.values(config.getProjects()) || [];
+      // There can either be a single config or one or more project
+      // configs, but not both.
+      if (projectConfigs.length === 0) {
+        projectConfigs = [config.getProjectConfig()];
+      }
+
+      // For each project config, subscribe to the file changes and update the
+      // cache accordingly.
+      projectConfigs.forEach((projectConfig: GraphQLProjectConfig) => {
+        watchmanClient.subscribe(
+          projectConfig.configDir,
+          this._graphQLCache.handleWatchmanSubscribeEvent(
+            rootPath,
+            projectConfig,
+          ),
+        );
+      });
+    } catch (err) {
+      // If checkVersion raises {type: "ENOENT"}, watchman is not available.
+      // But it's okay to proceed. We'll use LSP watched file change notifications
+      // instead. If any other kind of error occurs, rethrow it up the call stack.
+      if (err.code === 'ENOENT') {
+        this._watchmanClient = undefined;
+      } else {
+        throw err;
+      }
+    }
   }
 
   async handleDidOpenOrSaveNotification(
@@ -399,8 +411,8 @@ export class MessageProcessor {
     return Promise.all(
       params.changes.map(async change => {
         if (
-          change.type === 1 /* Created */ ||
-          change.type === 2 /* Changed */
+          change.type === FileChangeTypeKind.Created ||
+          change.type === FileChangeTypeKind.Changed
         ) {
           const uri = change.uri;
           const text: string = readFileSync(new URL(uri).pathname).toString();
@@ -434,8 +446,7 @@ export class MessageProcessor {
           );
 
           return {uri, diagnostics};
-        } else if (change.type === 3 /* Deleted */) {
-          this._logger.log('file deleted, removing from cache');
+        } else if (change.type === FileChangeTypeKind.Deleted) {
           this._graphQLCache.updateFragmentDefinitionCache(
             this._graphQLCache.getGraphQLConfig().configDir,
             change.uri,

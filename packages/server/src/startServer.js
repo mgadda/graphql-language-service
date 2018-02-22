@@ -11,6 +11,7 @@
 import net from 'net';
 import path from 'path';
 
+import {GraphQLWatchman} from './GraphQLWatchman';
 import {MessageProcessor} from './MessageProcessor';
 
 import {
@@ -103,7 +104,7 @@ function addHandlers(
   configDir?: string,
   logger: Logger,
 ): void {
-  const messageProcessor = new MessageProcessor(logger);
+  const messageProcessor = new MessageProcessor(logger, new GraphQLWatchman());
   connection.onNotification(
     DidOpenTextDocumentNotification.type,
     async params => {
