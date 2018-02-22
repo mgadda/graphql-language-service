@@ -18,11 +18,9 @@ import type {
 } from 'graphql-language-service-types';
 import {FileChangeTypeKind} from 'graphql-language-service-types';
 
-require('util.promisify/shim')(); // required until VS Code moves to node v8.x+
 import {extname, dirname} from 'path';
-import {open, stat, readFile, Stats, readFileSync} from 'fs';
+import {readFileSync} from 'fs';
 import {URL} from 'url';
-import {promisify} from 'util';
 import {
   findGraphQLConfigFile,
   getGraphQLConfig,
@@ -107,8 +105,12 @@ export class MessageProcessor {
 
     this._graphQLCache = await getGraphQLCache(rootPath);
     if (this._watchmanClient) {
-      this._subcribeWatchman(rootPath, this._graphQLCache, this._watchmanClient);
-    }    
+      this._subcribeWatchman(
+        rootPath,
+        this._graphQLCache,
+        this._watchmanClient,
+      );
+    }
     this._languageService = new GraphQLLanguageService(this._graphQLCache);
 
     if (!serverCapabilities) {
@@ -129,7 +131,11 @@ export class MessageProcessor {
 
   // Use watchman to subscribe to project file changes only if watchman is
   // installed. Otherwise, rely on LSP watched files did change events.
-  async _subcribeWatchman(rootPath: string, graphqlCache: GraphQLCache, watchmanClient: GraphQLWatchman) {
+  async _subcribeWatchman(
+    rootPath: string,
+    graphqlCache: GraphQLCache,
+    watchmanClient: GraphQLWatchman,
+  ) {
     if (!watchmanClient) {
       return;
     }
@@ -139,7 +145,8 @@ export class MessageProcessor {
 
       // Otherwise, subcribe watchman according to project config(s).
       const config = getGraphQLConfig(rootPath);
-      let projectConfigs: GraphQLProjectConfig[] = Object.values(config.getProjects()) || [];
+      let projectConfigs: GraphQLProjectConfig[] =
+        Object.values(config.getProjects()) || [];
       // There can either be a single config or one or more project
       // configs, but not both.
       if (projectConfigs.length === 0) {
@@ -420,7 +427,7 @@ export class MessageProcessor {
 
           this._updateFragmentDefinition(uri, contents);
 
-          let diagnostics = (await Promise.all(
+          const diagnostics = (await Promise.all(
             contents.map(async ({query, range}) => {
               const results = await this._languageService.getDiagnostics(
                 query,

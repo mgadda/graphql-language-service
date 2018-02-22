@@ -18,7 +18,7 @@ import MockWatchmanClient from '../__mocks__/MockWatchmanClient';
 describe('MessageProcessor', () => {
   const mockWatchmanClient = new MockWatchmanClient();
   const messageProcessor = new MessageProcessor(undefined, mockWatchmanClient);
-  
+
   const queryDir = `${__dirname}/__queries__`;
   const textDocumentTestString = `
   {

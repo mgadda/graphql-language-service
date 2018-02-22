@@ -20,8 +20,6 @@ import type {
   GraphQLProjectConfig,
 } from 'graphql-language-service-types';
 
-require('util.promisify/shim')(); // required until VS Code moves to node v8.x+
-import {promisify} from 'util';
 import fs from 'fs';
 import path from 'path';
 import {GraphQLSchema, extendSchema, parse, visit} from 'graphql';
@@ -45,7 +43,6 @@ import {
   DIRECTIVE_DEFINITION,
 } from 'graphql/language/kinds';
 import {getGraphQLConfig, GraphQLConfig} from 'graphql-config';
-import {GraphQLWatchman} from './GraphQLWatchman';
 import {getQueryAndRange} from './MessageProcessor';
 import stringToHash from './stringToHash';
 import glob from 'glob';

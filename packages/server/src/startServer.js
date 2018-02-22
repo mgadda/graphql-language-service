@@ -9,7 +9,6 @@
  */
 
 import net from 'net';
-import path from 'path';
 
 import {GraphQLWatchman} from './GraphQLWatchman';
 import {MessageProcessor} from './MessageProcessor';

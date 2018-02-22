@@ -16,7 +16,6 @@ import {beforeEach, describe, it} from 'mocha';
 
 import {GraphQLCache} from '../GraphQLCache';
 import {getQueryAndRange} from '../MessageProcessor';
-import MockWatchmanClient from '../__mocks__/MockWatchmanClient';
 
 function wihtoutASTNode(definition: object) {
   const result = {...definition};
@@ -28,7 +27,6 @@ describe('GraphQLCache', () => {
   let cache;
 
   beforeEach(async () => {
-    const watchmanClient = new MockWatchmanClient();
     const configDir = __dirname;
     const graphQLRC = getGraphQLConfig(configDir);
     cache = new GraphQLCache(configDir, graphQLRC);
