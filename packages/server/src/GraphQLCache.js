@@ -11,6 +11,7 @@
 import type {ASTNode, DocumentNode} from 'graphql/language';
 import type {
   CachedContent,
+  GraphQLCache as GraphQLCacheInterface,
   GraphQLConfig as GraphQLConfigInterface,
   GraphQLFileMetadata,
   GraphQLFileInfo,
@@ -52,12 +53,14 @@ import glob from 'glob';
 // Maximum files to read when processing GraphQL files.
 const MAX_READS = 200;
 
-export async function getGraphQLCache(configDir: Uri): Promise<GraphQLCache> {
+export async function getGraphQLCache(
+  configDir: Uri,
+): Promise<GraphQLCacheInterface> {
   const graphQLConfig = await getGraphQLConfig(configDir);
   return new GraphQLCache(configDir, graphQLConfig);
 }
 
-export class GraphQLCache {
+export class GraphQLCache implements GraphQLCacheInterface {
   _configDir: Uri;
   _graphQLFileListCache: Map<Uri, Map<string, GraphQLFileInfo>>;
   _graphQLConfig: GraphQLConfig;
